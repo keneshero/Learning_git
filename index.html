@@ -1,0 +1,1957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Git & GitHub Learning</title>
+    <style>
+        /* ========== RESET & BASE ========== */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        a { color: #58a6ff; text-decoration: none; }
+        ::selection { background: rgba(240,136,62,0.3); color: #fff; }
+
+        /* ========== HEADER ========== */
+        header {
+            background: linear-gradient(135deg, #161b22 0%, #0d1117 100%);
+            border-bottom: 1px solid #30363d;
+            padding: 1.2rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #f0883e, #f54c4c, #8957e5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            position: relative;
+        }
+        header h1::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, #f0883e, #f54c4c, #8957e5, transparent);
+            border-radius: 2px;
+            opacity: 0.5;
+            animation: shimmer 3s infinite linear;
+            background-size: 200% 100%;
+        }
+        @keyframes shimmer {
+            0% { background-position: 0% 0%; }
+            100% { background-position: 200% 0%; }
+        }
+        header h1 span { font-size: 1.8rem; display: inline-block; animation: logoPulse 3s ease-in-out infinite; }
+        @keyframes logoPulse {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 transparent); }
+            50% { transform: scale(1.1); filter: drop-shadow(0 0 8px rgba(240,136,62,0.4)); }
+        }
+        header nav { display: flex; gap: 1rem; }
+        header nav a {
+            padding: 0.4rem 1rem;
+            border-radius: 6px;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 0.9rem;
+            position: relative;
+        }
+        header nav a:hover {
+            background: #21262d;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        header nav a:active { transform: translateY(0); }
+
+        /* ========== LAYOUT ========== */
+        .app-container {
+            display: flex;
+            min-height: calc(100vh - 64px);
+        }
+
+        /* ========== SIDEBAR ========== */
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(180deg, #161b22 0%, #0d1117 100%);
+            border-right: 1px solid #30363d;
+            padding: 1.5rem 0;
+            flex-shrink: 0;
+            overflow-y: auto;
+            height: calc(100vh - 64px);
+            position: sticky;
+            top: 64px;
+            transition: box-shadow 0.3s;
+        }
+        .sidebar:hover {
+            box-shadow: inset -2px 0 8px rgba(240,136,62,0.05);
+        }
+        .sidebar h2 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #8b949e;
+            padding: 0 1.5rem 0.8rem;
+            opacity: 0.8;
+        }
+        .cmd-list { list-style: none; }
+        .cmd-list li { cursor: pointer; }
+        .cmd-list li a {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.65rem 1.5rem;
+            color: #c9d1d9;
+            font-size: 0.9rem;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            border-left: 3px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+        .cmd-list li a::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, rgba(240,136,62,0.06) 0%, transparent 100%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        .cmd-list li a::after {
+            content: '';
+            position: absolute;
+            right: 1.5rem;
+            top: 50%;
+            transform: translateY(-50%) scaleX(0);
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #f0883e;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0.6;
+        }
+        .cmd-list li a:hover::before { opacity: 1; }
+        .cmd-list li a:hover::after { transform: translateY(-50%) scaleX(1); }
+        .cmd-list li a:hover {
+            background: #1c2128;
+            color: #e6edf3;
+            transform: translateX(4px);
+            box-shadow: 2px 0 12px rgba(0,0,0,0.2);
+        }
+        .cmd-list li a.active {
+            background: #1c2128;
+            border-left-color: #f0883e;
+            color: #f0883e;
+            box-shadow: inset 0 0 30px rgba(240,136,62,0.05), 2px 0 12px rgba(0,0,0,0.3);
+        }
+        .cmd-list li a.active::before {
+            opacity: 1;
+            background: linear-gradient(90deg, rgba(240,136,62,0.12) 0%, transparent 100%);
+        }
+        .cmd-list li a.active::after {
+            transform: translateY(-50%) scaleX(1);
+            box-shadow: 0 0 8px rgba(240,136,62,0.5);
+        }
+        .cmd-badge {
+            font-size: 0.6rem;
+            background: #21262d;
+            color: #8b949e;
+            padding: 0.1rem 0.5rem;
+            border-radius: 999px;
+            margin-left: auto;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid transparent;
+        }
+        .cmd-list li a:hover .cmd-badge {
+            background: #30363d;
+            color: #c9d1d9;
+            border-color: #30363d;
+            transform: scale(1.05);
+        }
+        .cmd-list li a.active .cmd-badge {
+            background: rgba(240,136,62,0.15);
+            color: #f0883e;
+            border-color: rgba(240,136,62,0.3);
+            box-shadow: 0 0 12px rgba(240,136,62,0.1);
+        }
+
+        /* ========== MAIN CONTENT ========== */
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            max-width: calc(100vw - 280px);
+            animation: pageFadeIn 0.4s ease;
+        }
+        @keyframes pageFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* ========== COMMAND VIEW ========== */
+        .command-view { display: none; }
+        .command-view.active { display: block; animation: commandSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        @keyframes commandSlideIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .cmd-header {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #30363d;
+            position: relative;
+        }
+        .cmd-header::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 80px;
+            height: 2px;
+            background: linear-gradient(90deg, #f0883e, transparent);
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+        .command-view.active .cmd-header::after {
+            width: 80px;
+        }
+        .cmd-header .cmd-syntax {
+            font-size: 1.8rem;
+            font-weight: 700;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            color: #f0883e;
+            margin-bottom: 0.3rem;
+            text-shadow: 0 0 40px rgba(240,136,62,0.1);
+        }
+        .cmd-header .cmd-desc {
+            font-size: 1rem;
+            color: #8b949e;
+        }
+        .cmd-header .cmd-tags {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        .cmd-header .cmd-tags span {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 999px;
+            background: #21262d;
+            color: #8b949e;
+            transition: all 0.2s;
+        }
+        .cmd-header .cmd-tags .tag-basic { background: #1f6feb33; color: #58a6ff; }
+        .cmd-header .cmd-tags .tag-advanced { background: #d2992233; color: #d29922; }
+        .cmd-header .cmd-tags .tag-danger { background: #da363333; color: #ff7b72; }
+        .cmd-header .cmd-tags span:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+
+        /* ========== VISUALIZATION AREA ========== */
+        .viz-area {
+            background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            min-height: 300px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .viz-area:hover {
+            border-color: #8b949e;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(240,136,62,0.05);
+        }
+        .viz-area::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 50% 50%, rgba(240,136,62,0.02) 0%, transparent 50%);
+            pointer-events: none;
+            animation: vizGlow 10s ease-in-out infinite;
+        }
+        @keyframes vizGlow {
+            0%, 100% { transform: translate(0, 0); }
+            25% { transform: translate(5%, 5%); }
+            50% { transform: translate(-5%, -5%); }
+            75% { transform: translate(5%, -5%); }
+        }
+        .viz-area canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            background: rgba(13,17,23,0.5);
+            border-radius: 8px;
+            transition: box-shadow 0.3s;
+            position: relative;
+            z-index: 1;
+        }
+        .viz-area:hover canvas {
+            box-shadow: 0 0 20px rgba(240,136,62,0.03);
+        }
+        .viz-controls {
+            display: flex;
+            gap: 0.6rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+        }
+        .viz-controls button {
+            background: linear-gradient(135deg, #21262d 0%, #161b22 100%);
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+            padding: 0.55rem 1.1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .viz-controls button::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 100%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .viz-controls button:hover::after { opacity: 1; }
+        .viz-controls button:hover {
+            background: #30363d;
+            border-color: #8b949e;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .viz-controls button:active { transform: translateY(0) scale(0.98); }
+        .viz-controls button.primary {
+            background: linear-gradient(135deg, #238636 0%, #1a6b2e 100%);
+            border-color: #2ea043;
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(35,134,54,0.3);
+        }
+        .viz-controls button.primary:hover {
+            background: linear-gradient(135deg, #2ea043 0%, #238636 100%);
+            box-shadow: 0 4px 16px rgba(35,134,54,0.4);
+            transform: translateY(-2px);
+        }
+        .viz-controls button.danger {
+            background: linear-gradient(135deg, #da3633 0%, #b12a28 100%);
+            border-color: #f85149;
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(218,54,51,0.3);
+        }
+        .viz-controls button.danger:hover {
+            background: linear-gradient(135deg, #f85149 0%, #da3633 100%);
+            box-shadow: 0 4px 16px rgba(218,54,51,0.4);
+            transform: translateY(-2px);
+        }
+        .viz-controls input[type="text"] {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+            padding: 0.55rem 0.9rem;
+            border-radius: 8px;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.85rem;
+            width: 200px;
+            transition: all 0.25s;
+        }
+        .viz-controls input[type="text"]:focus {
+            outline: none;
+            border-color: #58a6ff;
+            box-shadow: 0 0 0 3px rgba(88,166,255,0.15);
+        }
+        .viz-controls input[type="text"]:hover {
+            border-color: #8b949e;
+        }
+        .viz-controls label {
+            font-size: 0.85rem;
+            color: #8b949e;
+        }
+
+        /* ========== STEP EXPLANATIONS ========== */
+        .cmd-steps {
+            background: linear-gradient(135deg, #161b22 0%, #0d1117 100%);
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 1.2rem 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s;
+        }
+        .cmd-steps:hover {
+            border-color: #8b949e;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        .cmd-steps h3 {
+            font-size: 0.9rem;
+            color: #8b949e;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .cmd-steps .step {
+            padding: 0.7rem 0;
+            border-bottom: 1px solid #21262d;
+            display: flex;
+            gap: 0.8rem;
+            align-items: flex-start;
+            opacity: 0.5;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .cmd-steps .step.active {
+            opacity: 1;
+            transform: translateX(6px);
+        }
+        .cmd-steps .step:last-child { border-bottom: none; }
+        .cmd-steps .step-num {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #21262d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            flex-shrink: 0;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid transparent;
+        }
+        .cmd-steps .step.active .step-num {
+            background: linear-gradient(135deg, #238636 0%, #1a6b2e 100%);
+            color: #fff;
+            box-shadow: 0 0 16px rgba(35,134,54,0.3);
+            transform: scale(1.1);
+            border-color: #2ea043;
+        }
+        .cmd-steps .step-content { flex: 1; }
+        .cmd-steps .step-content .step-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 0.2rem;
+            transition: color 0.3s;
+        }
+        .cmd-steps .step.active .step-content .step-title {
+            color: #e6edf3;
+        }
+        .cmd-steps .step-content .step-desc {
+            font-size: 0.85rem;
+            color: #8b949e;
+            line-height: 1.5;
+        }
+        .cmd-steps .step-content code {
+            background: #21262d;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.8rem;
+            color: #f0883e;
+            transition: all 0.2s;
+        }
+        .cmd-steps .step-content code:hover {
+            background: #30363d;
+            color: #f0883e;
+        }
+
+        /* ========== CODE EXAMPLE ========== */
+        .code-example {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s;
+        }
+        .code-example:hover {
+            border-color: #8b949e;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        .code-example .code-header {
+            background: linear-gradient(135deg, #21262d 0%, #161b22 100%);
+            padding: 0.5rem 1rem;
+            font-size: 0.75rem;
+            color: #8b949e;
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .code-example .code-header .copy-btn {
+            background: #21262d;
+            border: 1px solid #30363d;
+            color: #8b949e;
+            padding: 0.25rem 0.7rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.7rem;
+            transition: all 0.25s;
+        }
+        .code-example .code-header .copy-btn:hover {
+            background: #30363d;
+            border-color: #8b949e;
+            color: #c9d1d9;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .code-example pre {
+            padding: 1rem;
+            overflow-x: auto;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: #c9d1d9;
+        }
+
+        /* ========== KNOWLEDGE CHECK ========== */
+        .quiz-section {
+            background: linear-gradient(135deg, #161b22 0%, #0d1117 100%);
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s;
+        }
+        .quiz-section:hover {
+            border-color: #8b949e;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        .quiz-section h3 {
+            font-size: 0.9rem;
+            color: #8b949e;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .quiz-question {
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+        .quiz-options { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; }
+        .quiz-options label {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.65rem 1rem;
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 0.9rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .quiz-options label::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(88,166,255,0.03) 0%, transparent 100%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .quiz-options label:hover::before { opacity: 1; }
+        .quiz-options label:hover {
+            background: #30363d;
+            border-color: #8b949e;
+            transform: translateX(3px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .quiz-options label:active { transform: translateX(1px) scale(0.99); }
+        .quiz-options label.correct {
+            background: linear-gradient(135deg, rgba(35,134,54,0.2) 0%, rgba(35,134,54,0.05) 100%);
+            border-color: #2ea043;
+            box-shadow: 0 0 20px rgba(35,134,54,0.1);
+        }
+        .quiz-options label.wrong {
+            background: linear-gradient(135deg, rgba(218,54,51,0.2) 0%, rgba(218,54,51,0.05) 100%);
+            border-color: #f85149;
+            box-shadow: 0 0 20px rgba(218,54,51,0.1);
+        }
+        .quiz-options input[type="radio"] { accent-color: #58a6ff; }
+        .quiz-feedback {
+            font-size: 0.85rem;
+            padding: 0.65rem 1rem;
+            border-radius: 8px;
+            display: none;
+            animation: feedbackSlide 0.3s ease;
+        }
+        @keyframes feedbackSlide {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .quiz-feedback.show { display: block; }
+        .quiz-feedback.correct {
+            background: linear-gradient(135deg, rgba(35,134,54,0.15) 0%, transparent 100%);
+            color: #7ee787;
+            border: 1px solid rgba(35,134,54,0.3);
+        }
+        .quiz-feedback.wrong {
+            background: linear-gradient(135deg, rgba(218,54,51,0.15) 0%, transparent 100%);
+            color: #ff7b72;
+            border: 1px solid rgba(218,54,51,0.3);
+        }
+
+        /* ========== SANDBOX (playground) ========== */
+        .sandbox {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #30363d;
+        }
+        .sandbox h3 {
+            margin-bottom: 0.8rem;
+            color: #8b949e;
+            font-size: 0.9rem;
+        }
+        .sandbox-input {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.8rem;
+            flex-wrap: wrap;
+        }
+        .sandbox-input input[type="text"] {
+            flex: 1;
+            min-width: 200px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+            padding: 0.65rem 1rem;
+            border-radius: 8px;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.9rem;
+            transition: all 0.25s;
+        }
+        .sandbox-input input[type="text"]:focus {
+            outline: none;
+            border-color: #f0883e;
+            box-shadow: 0 0 0 3px rgba(240,136,62,0.15);
+        }
+        .sandbox-input input[type="text"]:hover {
+            border-color: #8b949e;
+        }
+        .sandbox-log {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 1rem;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.8rem;
+            line-height: 1.7;
+        }
+        .sandbox-log .log-line { color: #8b949e; }
+        .sandbox-log .log-line.success { color: #7ee787; }
+        .sandbox-log .log-line.error { color: #ff7b72; }
+        .sandbox-log .log-line.info { color: #58a6ff; }
+
+        /* ========== TOAST ========== */
+        .toast {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            background: linear-gradient(135deg, #238636 0%, #1a6b2e 100%);
+            color: #fff;
+            padding: 0.8rem 1.5rem;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 200;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            border: 1px solid rgba(46,160,67,0.3);
+        }
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 20px rgba(35,134,54,0.1);
+        }
+
+        /* ========== SCROLLBAR ========== */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0d1117; }
+        ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; transition: background 0.2s; }
+        ::-webkit-scrollbar-thumb:hover { background: #8b949e; }
+
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 900px) {
+            .sidebar { width: 220px; }
+            .main-content { max-width: calc(100vw - 220px); padding: 1.5rem; }
+            .cmd-header .cmd-syntax { font-size: 1.4rem; }
+        }
+        @media (max-width: 640px) {
+            .app-container { flex-direction: column; }
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: static;
+                border-right: none;
+                border-bottom: 1px solid #30363d;
+                padding: 0.5rem 0;
+            }
+            .sidebar:hover { box-shadow: none; }
+            .sidebar h2 { display: none; }
+            .cmd-list { display: flex; flex-wrap: wrap; padding: 0 0.5rem; }
+            .cmd-list li { flex: 1 1 auto; min-width: 120px; }
+            .cmd-list li a { padding: 0.4rem 0.8rem; font-size: 0.8rem; border-left: none; border-bottom: 2px solid transparent; }
+            .cmd-list li a:hover { transform: none; }
+            .cmd-list li a.active { border-left-color: transparent; border-bottom-color: #f0883e; }
+            .cmd-list li a::after { display: none; }
+            .main-content { max-width: 100%; padding: 1rem; }
+            header { padding: 0.8rem 1rem; flex-direction: column; gap: 0.5rem; }
+            header nav { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ========== HEADER ========== -->
+<header>
+    <h1><span>⬡</span> Git & GitHub Interactive Lab</h1>
+    <nav>
+        <a href="#sandbox">🎮 Playground</a>
+        <a href="#" onclick="resetAll()">🔄 Reset All</a>
+    </nav>
+</header>
+
+<!-- ========== APP CONTAINER ========== -->
+<div class="app-container">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <h2>📌 Commands</h2>
+        <ul class="cmd-list" id="cmdList"></ul>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content" id="mainContent"></main>
+
+</div>
+
+<!-- ========== TOAST ========== -->
+<div class="toast" id="toast"></div>
+
+<script>
+    // ================================================================
+    //  DATA: All Git/GitHub commands with explanations, steps, quizzes
+    // ================================================================
+    const COMMANDS = [
+        {
+            id: 'git-init',
+            cmd: 'git init',
+            tag: 'basic',
+            description: 'Initialize a new Git repository in the current directory.',
+            longDesc: 'Creates a hidden .git folder that tracks all changes. This is the first command you run when starting a new project with Git.',
+            syntax: 'git init [directory-name]',
+            example: `# Initialize a new repository\n$ git init\nInitialized empty Git repository in /project/.git/\n\n# Initialize in a specific folder\n$ git init my-project`,
+            steps: [
+                { title: 'Create directory', desc: 'You have a project folder with your code files.' },
+                { title: 'Run git init', desc: 'Git creates a hidden <code>.git</code> directory inside your project.' },
+                { title: 'Tracking begins', desc: 'Now Git can start tracking changes — but no files are staged yet.' },
+            ],
+            quiz: {
+                q: 'What does `git init` do?',
+                options: ['Downloads Git', 'Creates a new repository', 'Deletes a repository', 'Shows Git version'],
+                correct: 1,
+                feedback: '✅ Correct! `git init` initializes a new Git repository in the current folder.'
+            },
+            animFn: 'animateInit'
+        },
+        {
+            id: 'git-clone',
+            cmd: 'git clone',
+            tag: 'basic',
+            description: 'Copy an existing remote repository to your local machine.',
+            longDesc: 'Downloads a repository from GitHub (or any remote URL) including all branches, commits, and history.',
+            syntax: 'git clone <remote-url> [local-folder]',
+            example: `# Clone over HTTPS\n$ git clone https://github.com/user/repo.git\n\n# Clone over SSH\n$ git clone git@github.com:user/repo.git\n\n# Clone into a specific folder\n$ git clone https://github.com/user/repo.git my-folder`,
+            steps: [
+                { title: 'Find a repository', desc: 'Go to any GitHub repo and copy its URL (HTTPS or SSH).' },
+                { title: 'Run git clone', desc: 'Git downloads all files, branches, and commit history to your machine.' },
+                { title: 'Ready to work', desc: 'A new folder appears locally with the full repository, including remote tracking.' },
+            ],
+            quiz: {
+                q: 'What does `git clone` do?',
+                options: ['Creates a new repo', 'Downloads a remote repo locally', 'Uploads local code', 'Deletes a repo'],
+                correct: 1,
+                feedback: '✅ Correct! `git clone` copies a remote repository to your local machine.'
+            },
+            animFn: 'animateClone'
+        },
+        {
+            id: 'git-add',
+            cmd: 'git add',
+            tag: 'basic',
+            description: 'Stage changes for the next commit.',
+            longDesc: 'Adds file changes to the "staging area" (index). Only staged changes will be included in the next commit.',
+            syntax: 'git add <file>  |  git add .  |  git add -A',
+            example: `# Stage a single file\n$ git add index.html\n\n# Stage all changes in current folder\n$ git add .\n\n# Stage all changes in the whole repo\n$ git add -A\n\n# Unstage a file (keep changes)\n$ git reset HEAD file.txt`,
+            steps: [
+                { title: 'Make changes', desc: 'Edit, add, or delete files in your working directory.' },
+                { title: 'Stage them', desc: 'Run <code>git add <file></code> to move changes to the staging area.' },
+                { title: 'Ready to commit', desc: 'Staged changes are now prepared — they will be saved permanently with <code>git commit</code>.' },
+            ],
+            quiz: {
+                q: 'What is the staging area?',
+                options: ['Where deleted files go', 'A temporary area before committing', 'The remote server', 'Git\'s trash bin'],
+                correct: 1,
+                feedback: '✅ Correct! The staging area holds changes you plan to include in the next commit.'
+            },
+            animFn: 'animateAdd'
+        },
+        {
+            id: 'git-commit',
+            cmd: 'git commit',
+            tag: 'basic',
+            description: 'Save staged changes as a permanent snapshot in the repository.',
+            longDesc: 'Creates a commit — a snapshot of all staged changes with a message describing what changed. Each commit has a unique hash.',
+            syntax: 'git commit -m "message"  |  git commit -a -m "msg"  |  git commit --amend',
+            example: `# Commit with a message\n$ git commit -m "Fix login button color"\n[main a1b2c3d] Fix login button color\n 1 file changed, 2 insertions(+), 1 deletion(-)\n\n# Stage all tracked files and commit\n$ git commit -a -m "Quick save"\n\n# Amend last commit (fix message or add files)\n$ git commit --amend -m "Corrected message"`,
+            steps: [
+                { title: 'Stage changes', desc: 'Use <code>git add</code> to stage the files you want to save.' },
+                { title: 'Write a message', desc: 'A descriptive commit message explains what changed and why.' },
+                { title: 'Commit saved!', desc: 'Git creates a permanent snapshot with a unique hash (e.g., <code>a1b2c3d</code>).' },
+            ],
+            quiz: {
+                q: 'What does `git commit` do?',
+                options: ['Deletes changes', 'Saves a snapshot of staged changes', 'Merges branches', 'Pushes to GitHub'],
+                correct: 1,
+                feedback: '✅ Correct! A commit saves a permanent snapshot of your staged changes.'
+            },
+            animFn: 'animateCommit'
+        },
+        {
+            id: 'git-status',
+            cmd: 'git status',
+            tag: 'basic',
+            description: 'Show the current state of the working directory and staging area.',
+            longDesc: 'Displays which files are modified, staged, or untracked — essential for knowing what\'s going on.',
+            syntax: 'git status  |  git status -s (short)',
+            example: `$ git status\nOn branch main\nChanges not staged for commit:\n  modified:   index.html\n\nUntracked files:\n  new-file.js\n\n$ git status -s\n M index.html\n?? new-file.js`,
+            steps: [
+                { title: 'Check state', desc: 'Run <code>git status</code> anytime to see what\'s changed.' },
+                { title: 'Interpret results', desc: '🟢 Staged = ready to commit | 🔴 Modified = not staged | ❓ Untracked = new files.' },
+                { title: 'Next actions', desc: 'Use <code>git add</code> to stage, then <code>git commit</code> to save.' },
+            ],
+            quiz: {
+                q: 'What does `git status` tell you?',
+                options: ['Who made commits', 'The state of your working directory', 'Remote repo info', 'Git version'],
+                correct: 1,
+                feedback: '✅ Correct! `git status` shows which files are modified, staged, or untracked.'
+            },
+            animFn: 'animateStatus'
+        },
+        {
+            id: 'git-log',
+            cmd: 'git log',
+            tag: 'basic',
+            description: 'View commit history.',
+            longDesc: 'Displays a list of all commits in reverse chronological order, including hash, author, date, and message.',
+            syntax: 'git log  |  git log --oneline  |  git log --graph',
+            example: `$ git log --oneline --graph\n* a1b2c3d (HEAD -> main) Fix login button\n* e4f5g6h Add user authentication\n* i7j8k9l Initial commit\n\n$ git log --author="John" --oneline\n$ git log --since="2024-01-01"`,
+            steps: [
+                { title: 'Run git log', desc: 'View the commit history of your repository.' },
+                { title: 'Read the output', desc: 'Each entry shows: commit hash, author, date, message.' },
+                { title: 'Navigate history', desc: 'Use <code>--oneline</code> for compact view, <code>--graph</code> for branch visualization.' },
+            ],
+            quiz: {
+                q: 'What does `git log --oneline` show?',
+                options: ['Only the latest commit', 'Compact commit history', 'File contents', 'Branch names'],
+                correct: 1,
+                feedback: '✅ Correct! `--oneline` shows a compact version of the commit history.'
+            },
+            animFn: 'animateLog'
+        },
+        {
+            id: 'git-branch',
+            cmd: 'git branch',
+            tag: 'basic',
+            description: 'List, create, or delete branches.',
+            longDesc: 'Branches let you work on features independently without affecting the main codebase.',
+            syntax: 'git branch  |  git branch <name>  |  git branch -d <name>',
+            example: `# List branches\n$ git branch\n* main\n  feature-login\n\n# Create a new branch\n$ git branch feature-nav\n\n# Delete a branch\n$ git branch -d feature-nav\n\n# Rename current branch\n$ git branch -m new-name`,
+            steps: [
+                { title: 'Create a branch', desc: 'Run <code>git branch feature-x</code> to create a new line of development.' },
+                { title: 'Switch to it', desc: 'Use <code>git checkout feature-x</code> or <code>git switch feature-x</code>.' },
+                { title: 'Work independently', desc: 'Changes on one branch don\'t affect others — perfect for features or fixes.' },
+            ],
+            quiz: {
+                q: 'What is a Git branch?',
+                options: ['A copy of the repo', 'An independent line of development', 'A remote server', 'A file type'],
+                correct: 1,
+                feedback: '✅ Correct! A branch is an independent line of development.'
+            },
+            animFn: 'animateBranch'
+        },
+        {
+            id: 'git-checkout',
+            cmd: 'git checkout / switch',
+            tag: 'basic',
+            description: 'Switch between branches or restore files.',
+            longDesc: 'Moves HEAD to a different branch or commit. `git switch` is the newer, safer alternative.',
+            syntax: 'git checkout <branch>  |  git switch <branch>  |  git checkout -b <new>',
+            example: `# Switch to existing branch\n$ git checkout feature-login\nSwitched to branch 'feature-login'\n\n# Create and switch (one command)\n$ git checkout -b feature-nav\n\n# Using the newer command\n$ git switch feature-login\n$ git switch -c feature-nav  # create + switch`,
+            steps: [
+                { title: 'Pick a branch', desc: 'You can switch to any existing branch.' },
+                { title: 'Run checkout/switch', desc: 'HEAD moves to the selected branch, files update to match.' },
+                { title: 'Continue working', desc: 'Any new commits will be added to the active branch.' },
+            ],
+            quiz: {
+                q: 'What does `git switch` do?',
+                options: ['Deletes a branch', 'Switches to another branch', 'Creates a commit', 'Pushes changes'],
+                correct: 1,
+                feedback: '✅ Correct! `git switch` moves your HEAD to a different branch.'
+            },
+            animFn: 'animateCheckout'
+        },
+        {
+            id: 'git-merge',
+            cmd: 'git merge',
+            tag: 'basic',
+            description: 'Combine changes from one branch into another.',
+            longDesc: 'Integrates changes from the source branch into the current branch. Creates a merge commit if there are diverging histories.',
+            syntax: 'git merge <branch>',
+            example: `# First switch to target branch\n$ git checkout main\n\n# Merge feature into main\n$ git merge feature-login\nUpdating a1b2c3d..e4f5g6h\nFast-forward\n\n# If conflicts occur, resolve them then:\n$ git merge --continue`,
+            steps: [
+                { title: 'Switch to target', desc: 'First checkout the branch you want to merge INTO (e.g., <code>main</code>).' },
+                { title: 'Run git merge', desc: 'Git incorporates changes from the source branch.' },
+                { title: 'Resolve conflicts (if any)', desc: 'If Git can\'t auto-merge, you must manually fix conflicts, then <code>git add</code> & <code>git commit</code>.' },
+            ],
+            quiz: {
+                q: 'What does `git merge` do?',
+                options: ['Deletes a branch', 'Combines changes from one branch into another', 'Creates a new repo', 'Shows file differences'],
+                correct: 1,
+                feedback: '✅ Correct! `git merge` integrates changes from one branch into another.'
+            },
+            animFn: 'animateMerge'
+        },
+        {
+            id: 'git-diff',
+            cmd: 'git diff',
+            tag: 'basic',
+            description: 'Show differences between commits, branches, or working directory vs stage.',
+            longDesc: 'Displays line-by-line changes. Essential for code review before committing.',
+            syntax: 'git diff  |  git diff --staged  |  git diff <branch1> <branch2>',
+            example: `# Working directory vs stage\n$ git diff\n- old line\n+ new line\n\n# Staged changes only\n$ git diff --staged\n\n# Compare two branches\n$ git diff main feature-login\n\n# Compare two commits\n$ git diff a1b2c3d e4f5g6h`,
+            steps: [
+                { title: 'Check unstaged changes', desc: '<code>git diff</code> shows what you\'ve changed but not yet staged.' },
+                { title: 'Check staged changes', desc: '<code>git diff --staged</code> shows what will be committed.' },
+                { title: 'Review before commit', desc: 'Always diff before committing to catch mistakes!' },
+            ],
+            quiz: {
+                q: 'What does `git diff` show?',
+                options: ['Commit messages', 'Differences between file versions', 'Branch names', 'Remote URLs'],
+                correct: 1,
+                feedback: '✅ Correct! `git diff` shows line-by-line differences between versions.'
+            },
+            animFn: 'animateDiff'
+        },
+        {
+            id: 'git-stash',
+            cmd: 'git stash',
+            tag: 'advanced',
+            description: 'Temporarily save uncommitted changes and clean the working directory.',
+            longDesc: 'Stashes tracked changes away so you can switch branches or pull changes, then reapply them later.',
+            syntax: 'git stash  |  git stash pop  |  git stash list  |  git stash drop',
+            example: `# Save current changes\n$ git stash\nSaved working directory and index state WIP on main: a1b2c3d\n\n# List stashes\n$ git stash list\nstash@{0}: WIP on main: a1b2c3d\n\n# Apply and remove latest stash\n$ git stash pop\n\n# Apply without removing\n$ git stash apply\n\n# Drop a stash\n$ git stash drop stash@{0}`,
+            steps: [
+                { title: 'Uncommitted work', desc: 'You have changes you\'re not ready to commit but need to switch branches.' },
+                { title: 'Stash them', desc: '<code>git stash</code> temporarily saves changes and reverts to clean state.' },
+                { title: 'Reapply later', desc: '<code>git stash pop</code> restores the latest stash. Use <code>git stash list</code> to see all stashes.' },
+            ],
+            quiz: {
+                q: 'What is `git stash` used for?',
+                options: ['Permanently delete changes', 'Temporarily save uncommitted changes', 'Merge branches', 'Push to remote'],
+                correct: 1,
+                feedback: '✅ Correct! Stash temporarily saves your uncommitted changes.'
+            },
+            animFn: 'animateStash'
+        },
+        {
+            id: 'git-remote',
+            cmd: 'git remote',
+            tag: 'advanced',
+            description: 'Manage connections to remote repositories.',
+            longDesc: 'Links your local repo to a remote (usually GitHub) so you can push/pull changes.',
+            syntax: 'git remote add <name> <url>  |  git remote -v  |  git remote remove <name>',
+            example: `# List remotes\n$ git remote -v\norigin  https://github.com/user/repo.git (fetch)\norigin  https://github.com/user/repo.git (push)\n\n# Add a remote\n$ git remote add origin https://github.com/user/repo.git\n\n# Remove a remote\n$ git remote remove origin\n\n# Change remote URL\n$ git remote set-url origin https://new-url.git`,
+            steps: [
+                { title: 'Create repo on GitHub', desc: 'Create an empty repository on GitHub (no README, no .gitignore).' },
+                { title: 'Add remote', desc: '<code>git remote add origin <url></code> links your local repo to GitHub.' },
+                { title: 'Push to remote', desc: 'Now you can push your code with <code>git push -u origin main</code>.' },
+            ],
+            quiz: {
+                q: 'What is "origin" in Git?',
+                options: ['Git default branch', 'Default name for the remote', 'A command flag', 'A file type'],
+                correct: 1,
+                feedback: '✅ Correct! "origin" is the default name Git gives to the remote repository.'
+            },
+            animFn: 'animateRemote'
+        },
+        {
+            id: 'git-push',
+            cmd: 'git push',
+            tag: 'advanced',
+            description: 'Upload local commits to a remote repository.',
+            longDesc: 'Sends your committed changes to GitHub (or any remote). The `-u` flag sets upstream tracking for future pushes.',
+            syntax: 'git push  |  git push origin <branch>  |  git push -u origin <branch>',
+            example: `# Push to default remote (origin) on current branch\n$ git push\n\n# Push to specific branch (first time use -u)\n$ git push -u origin feature-login\n\n# Push all branches\n$ git push --all origin\n\n# Force push (⚠️ careful!)\n$ git push --force`,
+            steps: [
+                { title: 'Commit locally', desc: 'Make sure all your changes are committed.' },
+                { title: 'Run git push', desc: '<code>git push origin main</code> uploads commits to the remote.' },
+                { title: 'On GitHub', desc: 'Your commits now appear on GitHub.com for the world to see (or your team).' },
+            ],
+            quiz: {
+                q: 'What does `git push` do?',
+                options: ['Downloads changes', 'Uploads local commits to remote', 'Deletes remote branch', 'Starts a new repo'],
+                correct: 1,
+                feedback: '✅ Correct! `git push` uploads your local commits to a remote repository.'
+            },
+            animFn: 'animatePush'
+        },
+        {
+            id: 'git-pull',
+            cmd: 'git pull',
+            tag: 'advanced',
+            description: 'Fetch and merge changes from a remote repository.',
+            longDesc: 'Downloads changes from remote and merges them into your current branch. Equivalent to `git fetch` + `git merge`.',
+            syntax: 'git pull  |  git pull origin <branch>  |  git pull --rebase',
+            example: `# Pull latest changes\n$ git pull\nAlready up to date.\n\n# Pull from specific branch\n$ git pull origin main\n\n# Pull with rebase (cleaner history)\n$ git pull --rebase\n\n# Fetch without merging\n$ git fetch origin`,
+            steps: [
+                { title: 'Check for remote changes', desc: 'You may be behind the remote if others have pushed.' },
+                { title: 'Run git pull', desc: 'Git fetches remote changes and merges them into your current branch.' },
+                { title: 'Resolve conflicts if any', desc: 'If the same files changed, resolve conflicts, then commit the merge.' },
+            ],
+            quiz: {
+                q: 'What does `git pull` do?',
+                options: ['Push changes to remote', 'Fetch + merge remote changes', 'Delete local branch', 'Show log'],
+                correct: 1,
+                feedback: '✅ Correct! `git pull` fetches remote changes and merges them locally.'
+            },
+            animFn: 'animatePull'
+        },
+        {
+            id: 'git-fetch',
+            cmd: 'git fetch',
+            tag: 'advanced',
+            description: 'Download objects and refs from a remote without merging.',
+            longDesc: 'Like `git pull` but doesn\'t merge — it only downloads new data so you can review before integrating.',
+            syntax: 'git fetch  |  git fetch origin  |  git fetch --all',
+            example: `# Fetch from default remote\n$ git fetch\n\n# Fetch and see what's new\n$ git fetch origin\n$ git log origin/main\n\n# Fetch all remotes\n$ git fetch --all\n\n# Then decide to merge\n$ git merge origin/main`,
+            steps: [
+                { title: 'Fetch remote data', desc: 'Git downloads new commits, branches, and tags from remote.' },
+                { title: 'Review changes', desc: 'You can diff or log against <code>origin/main</code> without affecting your work.' },
+                { title: 'Merge manually', desc: 'When ready, merge using <code>git merge origin/main</code>.' },
+            ],
+            quiz: {
+                q: 'How is `git fetch` different from `git pull`?',
+                options: ['Fetch also deletes local files', 'Fetch doesn\'t merge, pull does', 'They are the same', 'Pull is faster'],
+                correct: 1,
+                feedback: '✅ Correct! `git fetch` only downloads; `git pull` downloads AND merges.'
+            },
+            animFn: 'animateFetch'
+        },
+        {
+            id: 'github-fork',
+            cmd: 'GitHub Fork',
+            tag: 'advanced',
+            description: 'Create a personal copy of someone else\'s repository on GitHub.',
+            longDesc: 'Forking creates a copy under your GitHub account. You can make changes and submit a Pull Request to the original.',
+            syntax: 'Click "Fork" button on GitHub → Clone your fork → Make changes → Open Pull Request',
+            example: `# 1. Fork on GitHub (click Fork button)\n# 2. Clone your fork\n$ git clone https://github.com/YOUR-USER/original-repo.git\n\n# 3. Add original as upstream\n$ git remote add upstream https://github.com/OWNER/original-repo.git\n\n# 4. Sync with upstream\n$ git pull upstream main`,
+            steps: [
+                { title: 'Fork on GitHub', desc: 'Click the Fork button on any public repository.' },
+                { title: 'Clone your fork', desc: 'Clone your copy to your local machine.' },
+                { title: 'Add upstream remote', desc: 'Link the original repo as "upstream" to sync later.' },
+                { title: 'Make changes & PR', desc: 'Work on a branch, push to your fork, then open a Pull Request.' },
+            ],
+            quiz: {
+                q: 'What is a GitHub Fork?',
+                options: ['A branch on GitHub', 'A personal copy of someone else\'s repo', 'A Git command', 'A merge strategy'],
+                correct: 1,
+                feedback: '✅ Correct! A fork is your personal copy of another user\'s repository.'
+            },
+            animFn: 'animateFork'
+        },
+        {
+            id: 'github-pr',
+            cmd: 'Pull Request (PR)',
+            tag: 'advanced',
+            description: 'Propose changes to a repository and request maintainers to review & merge.',
+            longDesc: 'PRs are the heart of collaboration on GitHub — they let you discuss, review, and improve code before merging.',
+            syntax: 'Push your branch → Open PR on GitHub → Discuss → Merge',
+            example: `# 1. Create a branch\n$ git checkout -b feature-awesome\n\n# 2. Make changes, commit, push\n$ git add .\n$ git commit -m "Add awesome feature"\n$ git push -u origin feature-awesome\n\n# 3. On GitHub, click "Compare & pull request"\n# 4. Team reviews, discusses\n# 5. Merge! 🎉`,
+            steps: [
+                { title: 'Push your branch', desc: 'Push your feature branch to GitHub.' },
+                { title: 'Open a PR', desc: 'On GitHub, click "Compare & pull request" for your branch.' },
+                { title: 'Review & discuss', desc: 'Team members comment, suggest changes, approve.' },
+                { title: 'Merge!', desc: 'Once approved, the maintainer merges your PR into the target branch.' },
+            ],
+            quiz: {
+                q: 'What is a Pull Request (PR)?',
+                options: ['A Git command to pull changes', 'A request to merge changes into a repository', 'A type of branch', 'A file format'],
+                correct: 1,
+                feedback: '✅ Correct! A PR is a request to merge your changes into a repository.'
+            },
+            animFn: 'animatePR'
+        }
+    ];
+
+    // ================================================================
+    //  STATE
+    // ================================================================
+    let currentCmd = 'git-init';
+    let animationInterval = null;
+    let sandboxHistory = [];
+
+    // ================================================================
+    //  BUILD UI
+    // ================================================================
+    function buildSidebar() {
+        const list = document.getElementById('cmdList');
+        list.innerHTML = '';
+        COMMANDS.forEach(cmd => {
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.href = `#${cmd.id}`;
+            a.textContent = cmd.cmd;
+            a.dataset.cmd = cmd.id;
+            a.addEventListener('click', e => {
+                e.preventDefault();
+                switchCommand(cmd.id);
+            });
+            const badge = document.createElement('span');
+            badge.className = 'cmd-badge';
+            badge.textContent = cmd.tag;
+            a.appendChild(badge);
+            li.appendChild(a);
+            list.appendChild(li);
+        });
+    }
+
+    function buildCommandViews() {
+        const container = document.getElementById('mainContent');
+        container.innerHTML = '';
+        COMMANDS.forEach(cmd => {
+            const view = document.createElement('div');
+            view.className = 'command-view';
+            view.id = `view-${cmd.id}`;
+
+            view.innerHTML = `
+                <div class="cmd-header">
+                    <div class="cmd-syntax">${cmd.cmd}</div>
+                    <div class="cmd-desc">${cmd.description}</div>
+                    <div class="cmd-tags">
+                        <span class="tag-${cmd.tag}">${cmd.tag}</span>
+                    </div>
+                </div>
+
+                <div class="viz-area" id="viz-${cmd.id}">
+                    <canvas id="canvas-${cmd.id}" width="800" height="300"></canvas>
+                    <div class="viz-controls" id="controls-${cmd.id}"></div>
+                </div>
+
+                <div class="cmd-steps">
+                    <h3>📋 How it works</h3>
+                    ${cmd.steps.map((s, i) => `
+                        <div class="step" id="step-${cmd.id}-${i}">
+                            <div class="step-num">${i + 1}</div>
+                            <div class="step-content">
+                                <div class="step-title">${s.title}</div>
+                                <div class="step-desc">${s.desc}</div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="code-example">
+                    <div class="code-header">
+                        <span>💻 Example</span>
+                        <button class="copy-btn" onclick="copyCode('${cmd.id}')">📋 Copy</button>
+                    </div>
+                    <pre id="code-${cmd.id}"></pre>
+                </div>
+
+                <div class="quiz-section" id="quiz-${cmd.id}">
+                    <h3>🧠 Knowledge Check</h3>
+                    <div class="quiz-question" id="quiz-q-${cmd.id}"></div>
+                    <div class="quiz-options" id="quiz-opts-${cmd.id}"></div>
+                    <div class="quiz-feedback" id="quiz-fb-${cmd.id}"></div>
+                </div>
+            `;
+
+            container.appendChild(view);
+        });
+
+        // Fill in code examples and quizzes
+        COMMANDS.forEach(cmd => {
+            const codeEl = document.getElementById(`code-${cmd.id}`);
+            codeEl.textContent = cmd.example;
+
+            const qEl = document.getElementById(`quiz-q-${cmd.id}`);
+            qEl.textContent = cmd.quiz.q;
+
+            const optsEl = document.getElementById(`quiz-opts-${cmd.id}`);
+            cmd.quiz.options.forEach((opt, i) => {
+                const label = document.createElement('label');
+                const radio = document.createElement('input');
+                radio.type = 'radio';
+                radio.name = `quiz-${cmd.id}`;
+                radio.value = i;
+                radio.addEventListener('change', () => checkQuiz(cmd.id, i));
+                label.appendChild(radio);
+                label.appendChild(document.createTextNode(` ${opt}`));
+                label.dataset.index = i;
+                optsEl.appendChild(label);
+            });
+
+            // Build controls
+            buildControls(cmd);
+        });
+    }
+
+    function buildControls(cmd) {
+        const controls = document.getElementById(`controls-${cmd.id}`);
+
+        // Common play/pause
+        const playBtn = document.createElement('button');
+        playBtn.className = 'primary';
+        playBtn.innerHTML = '▶ Play Animation';
+        playBtn.onclick = () => animateCommand(cmd.id);
+        controls.appendChild(playBtn);
+
+        // Sandbox shortcut link
+        const sandboxLink = document.createElement('button');
+        sandboxLink.innerHTML = '🎮 Try in Sandbox';
+        sandboxLink.onclick = () => {
+            document.getElementById('sandboxInput').value = cmd.cmd;
+            document.getElementById('sandboxInput').focus();
+            document.getElementById('sandboxInput').scrollIntoView({ behavior: 'smooth' });
+        };
+        controls.appendChild(sandboxLink);
+    }
+
+    // ================================================================
+    //  SWITCH COMMAND
+    // ================================================================
+    function switchCommand(id) {
+        currentCmd = id;
+
+        // Update sidebar
+        document.querySelectorAll('.cmd-list a').forEach(a => {
+            a.classList.toggle('active', a.dataset.cmd === id);
+        });
+
+        // Update view
+        document.querySelectorAll('.command-view').forEach(v => v.classList.remove('active'));
+        const view = document.getElementById(`view-${id}`);
+        if (view) view.classList.add('active');
+
+        // Reset steps opacity
+        const cmd = COMMANDS.find(c => c.id === id);
+        if (cmd) {
+            cmd.steps.forEach((_, i) => {
+                const step = document.getElementById(`step-${id}-${i}`);
+                if (step) step.classList.remove('active');
+            });
+        }
+
+        // Draw default canvas
+        drawDefault(id);
+    }
+
+    // ================================================================
+    //  DRAWING HELPERS
+    // ================================================================
+    function getCanvas(id) {
+        return document.getElementById(`canvas-${id}`);
+    }
+
+    function drawDefault(id) {
+        const canvas = getCanvas(id);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const cmd = COMMANDS.find(c => c.id === id);
+        if (!cmd) return;
+
+        // Draw background grid
+        ctx.strokeStyle = '#1e2530';
+        ctx.lineWidth = 0.5;
+        for (let x = 0; x < canvas.width; x += 40) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, canvas.height);
+            ctx.stroke();
+        }
+        for (let y = 0; y < canvas.height; y += 40) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(canvas.width, y);
+            ctx.stroke();
+        }
+
+        // Draw placeholder text
+        ctx.fillStyle = '#30363d';
+        ctx.font = '18px "Segoe UI", system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`Click "Play Animation" to see ${cmd.cmd} in action!`, canvas.width / 2, canvas.height / 2);
+
+        ctx.font = '14px "Segoe UI", system-ui, sans-serif';
+        ctx.fillStyle = '#21262d';
+        ctx.fillText(`🖱️ Watch how this command works visually ↓`, canvas.width / 2, canvas.height / 2 + 35);
+    }
+
+    // ================================================================
+    //  ANIMATION ENGINE
+    // ================================================================
+    function animateCommand(id) {
+        const cmd = COMMANDS.find(c => c.id === id);
+        if (!cmd) return;
+
+        // Reset steps
+        cmd.steps.forEach((_, i) => {
+            const step = document.getElementById(`step-${id}-${i}`);
+            if (step) step.classList.remove('active');
+        });
+
+        // Call appropriate animation function
+        if (typeof window[cmd.animFn] === 'function') {
+            window[cmd.animFn](id);
+        } else {
+            // Fallback: generic animation
+            genericAnimation(id);
+        }
+
+        // Show toast
+        showToast(`▶️ Playing animation for ${cmd.cmd}`);
+    }
+
+    // ---- Generic animation fallback ----
+    function genericAnimation(id) {
+        const cmd = COMMANDS.find(c => c.id === id);
+        if (!cmd) return;
+        const canvas = getCanvas(id);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width, H = canvas.height;
+        let step = 0;
+        const totalSteps = cmd.steps.length;
+
+        if (animationInterval) {
+            clearInterval(animationInterval);
+            animationInterval = null;
+        }
+
+        animationInterval = setInterval(() => {
+            ctx.clearRect(0, 0, W, H);
+
+            // Grid
+            ctx.strokeStyle = '#1e2530';
+            ctx.lineWidth = 0.5;
+            for (let x = 0; x < W; x += 40) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+            }
+            for (let y = 0; y < H; y += 40) {
+                ctx.beginPath();
+                ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+            }
+
+            // Show current step
+            ctx.fillStyle = '#f0883e';
+            ctx.font = 'bold 24px "Segoe UI", system-ui, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(cmd.cmd, W / 2, 50);
+
+            ctx.fillStyle = '#8b949e';
+            ctx.font = '16px "Segoe UI", system-ui, sans-serif';
+            ctx.fillText(`Step ${step + 1}: ${cmd.steps[step].title}`, W / 2, 85);
+
+            ctx.fillStyle = '#c9d1d9';
+            ctx.font = '14px "Segoe UI", system-ui, sans-serif';
+            const words = cmd.steps[step].desc.replace(/<[^>]*>/g, '');
+            ctx.fillText(words, W / 2, 120);
+
+            // Draw animated element
+            const t = Date.now() / 1000;
+            const x = 150 + Math.sin(t) * 50 + step * 80;
+            const y = 190 + Math.sin(t * 0.7) * 30;
+
+            // Draw commit-like dot
+            const gradient = ctx.createRadialGradient(x, y, 2, x, y, 15);
+            gradient.addColorStop(0, '#f0883e');
+            gradient.addColorStop(0.5, '#d29922');
+            gradient.addColorStop(1, 'transparent');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(x, y, 15, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#f0883e';
+            ctx.beginPath();
+            ctx.arc(x, y, 6, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Connection lines
+            ctx.strokeStyle = '#30363d';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            for (let i = 0; i < step; i++) {
+                const px = 150 + Math.sin(t) * 50 + i * 80;
+                const py = 190 + Math.sin(t * 0.7) * 30;
+                ctx.beginPath();
+                ctx.arc(px, py, 4, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            ctx.setLineDash([]);
+
+            step = (step + 1) % totalSteps;
+        }, 2000);
+    }
+
+    // ================================================================
+    //  SPECIFIC ANIMATIONS
+    // ================================================================
+
+    // ----- git init -----
+    function animateInit(id) {
+        const canvas = getCanvas(id);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width, H = canvas.height;
+        const steps = COMMANDS.find(c => c.id === id).steps;
+        let step = 0;
+
+        if (animationInterval) { clearInterval(animationInterval); animationInterval = null; }
+
+        function draw() {
+            ctx.clearRect(0, 0, W, H);
+            ctx.strokeStyle = '#1e2530';
+            ctx.lineWidth = 0.5;
+            for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+            for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+
+            if (step === 0) {
+                ctx.fillStyle = '#30363d';
+                ctx.fillRect(200, 100, 160, 120);
+                ctx.fillStyle = '#58a6ff';
+                ctx.font = '14px "Segoe UI"'; ctx.textAlign = 'center';
+                ctx.fillText('📁 my-project', 280, 125);
+                ctx.fillStyle = '#8b949e';
+                ctx.font = '12px "Segoe UI"';
+                ctx.fillText('index.html', 280, 150);
+                ctx.fillText('style.css', 280, 170);
+                ctx.fillText('app.js', 280, 190);
+                ctx.fillStyle = '#8b949e';
+                ctx.font = '30px "Segoe UI"';
+                ctx.fillText('→', 420, 170);
+                ctx.fillStyle = '#30363d';
+                ctx.fillRect(500, 100, 160, 120);
+                ctx.fillStyle = '#f0883e';
+                ctx.font = '14px "Segoe UI"';
+                ctx.fillText('📁 .git (hidden)', 580, 125);
+                ctx.fillStyle = '#7ee787';
+                ctx.font = '12px "Segoe UI"';
+                ctx.fillText('✅ Initialized!', 580, 155);
+                ctx.fillText('HEAD, config,', 580, 175);
+                ctx.fillText('objects, refs...', 580, 195);
+            } else if (step === 1) {
+                ctx.fillStyle = '#0d1117';
+                ctx.fillRect(100, 70, 600, 180);
+                ctx.strokeStyle = '#30363d';
+                ctx.strokeRect(100, 70, 600, 180);
+                ctx.fillStyle = '#8b949e';
+                ctx.font = '13px "Cascadia Code", monospace';
+                ctx.textAlign = 'left';
+                ctx.fillText('$ cd my-project', 130, 110);
+                ctx.fillStyle = '#f0883e';
+                ctx.fillText('$ git init', 130, 135);
+                ctx.fillStyle = '#7ee787';
+                ctx.fillText('Initialized empty Git repository in', 130, 160);
+                ctx.fillText('my-project/.git/', 130, 180);
+            } else {
+                ctx.fillStyle = '#7ee787';
+                ctx.font = '60px "Segoe UI"';
+                ctx.textAlign = 'center';
+                ctx.fillText('✅', W / 2, 150);
+                ctx.fillStyle = '#7ee787';
+                ctx.font = '20px "Segoe UI"';
+                ctx.fillText('Git repository initialized successfully!', W / 2, 210);
+                ctx.fillStyle = '#8b949e';
+                ctx.font = '14px "Segoe UI"';
+                ctx.fillText('Now you can start tracking changes with git add, git commit, etc.', W / 2, 245);
+            }
+            document.getElementById(`step-${id}-${step}`)?.classList.add('active');
+            if (step > 0) document.getElementById(`step-${id}-${step - 1}`)?.classList.remove('active');
+            step = (step + 1) % steps.length;
+        }
+        draw();
+        animationInterval = setInterval(draw, 2500);
+    }
+    window.animateInit = animateInit;
+
+    function animateClone(id) {
+        const canvas = getCanvas(id);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width, H = canvas.height;
+        const steps = COMMANDS.find(c => c.id === id).steps;
+        let step = 0;
+        if (animationInterval) { clearInterval(animationInterval); animationInterval = null; }
+        function draw() {
+            ctx.clearRect(0, 0, W, H);
+            ctx.strokeStyle = '#1e2530'; ctx.lineWidth = 0.5;
+            for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+            for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+            if (step === 0) {
+                ctx.fillStyle = '#8b949e'; ctx.font = '50px "Segoe UI"'; ctx.textAlign = 'center';
+                ctx.fillText('🐙 GitHub', W / 2 - 180, 120);
+                ctx.fillStyle = '#30363d'; ctx.fillRect(W / 2 - 280, 140, 200, 110);
+                ctx.fillStyle = '#c9d1d9'; ctx.font = '13px "Cascadia Code", monospace'; ctx.textAlign = 'left';
+                ctx.fillText('  📂 user/repo', W / 2 - 260, 170);
+                ctx.fillText('  ├── README.md', W / 2 - 260, 195);
+                ctx.fillText('  ├── src/', W / 2 - 260, 215);
+                ctx.fillText('  └── package.json', W / 2 - 260, 235);
+                ctx.fillStyle = '#58a6ff'; ctx.font = '40px "Segoe UI"'; ctx.textAlign = 'center';
+                ctx.fillText('⬇️', W / 2, 200);
+                ctx.fillStyle = '#30363d'; ctx.fillRect(W / 2 + 80, 140, 200, 110);
+                ctx.fillStyle = '#7ee787'; ctx.font = '13px "Cascadia Code", monospace'; ctx.textAlign = 'left';
+                ctx.fillText('  📁 repo (local)', W / 2 + 100, 170);
+                ctx.fillText('  ├── README.md', W / 2 + 100, 195);
+                ctx.fillText('  ├── src/', W / 2 + 100, 215);
+                ctx.fillText('  └── package.json', W / 2 + 100, 235);
+            } else if (step === 1) {
+                ctx.fillStyle = '#0d1117'; ctx.fillRect(80, 60, 640, 200);
+                ctx.strokeStyle = '#30363d'; ctx.strokeRect(80, 60, 640, 200);
+                ctx.fillStyle = '#8b949e'; ctx.font = '13px "Cascadia Code", monospace'; ctx.textAlign = 'left';
+                ctx.fillText('$ git clone https://github.com/user/repo.git', 110, 100);
+                ctx.fillStyle = '#7ee787';
+                ctx.fillText('Cloning into \'repo\'...', 110, 125);
+                ctx.fillText('remote: Enumerating objects: 42, done.', 110, 150);
+                ctx.fillText('Receiving objects: 100% (42/42), done.', 110, 175);
+                ctx.fillStyle = '#f0883e'; ctx.fillText('✅ Successfully cloned!', 110, 210);
+            } else {
+                ctx.fillStyle = '#7ee787'; ctx.font = '50px "Segoe UI"'; ctx.textAlign = 'center';
+                ctx.fillText('✅', W / 2, 140);
+                ctx.fillStyle = '#c9d1d9'; ctx.font = '18px "Segoe UI"';
+                ctx.fillText('Repository cloned to your local machine!', W / 2, 200);
+                ctx.fillStyle = '#8b949e'; ctx.font = '14px "Segoe UI"';
+                ctx.fillText('You now have all files, branches, and commit history.', W / 2, 235);
+            }
+            document.getElementById(`step-${id}-${step}`)?.classList.add('active');
+            if (step > 0) document.getElementById(`step-${id}-${step - 1}`)?.classList.remove('active');
+            step = (step + 1) % steps.length;
+        }
+        draw();
+        animationInterval = setInterval(draw, 2500);
+    }
+    window.animateClone = animateClone;
+
+    function animateAdd(id) {
+        const canvas = getCanvas(id);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width, H = canvas.height;
+        const steps = COMMANDS.find(c => c.id === id).steps;
+        let step = 0;
+        if (animationInterval) { clearInterval(animationInterval); animationInterval = null; }
+        function draw() {
+            ctx.clearRect(0, 0, W, H);
+            ctx.strokeStyle = '#1e2530'; ctx.lineWidth = 0.5;
+            for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+            for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+            if (step === 0) {
+                ctx.fillStyle = '#30363d'; ctx.fillRect(50, 60, 200, 200);
+                ctx.fillStyle = '#c9d1d9'; ctx.font = '14px "Segoe UI"'; ctx.textAlign = 'center';
+                ctx.fillText('📁 Working Directory', 150, 85);
+                ctx.fillStyle = '#f0883e'; ctx.font = '13px "Segoe UI"';
+                ctx.fillText('✏️ index.html (edited)', 150, 120);
+                ctx.fillText('✏️ style.css (edited)', 150, 150);
+                ctx.fillText('➕ new-file.js (new)', 150, 180);
+                ctx.fillText('  (unchanged) app.js', 150, 210);
+                ctx.fillText('  (unchanged) README.md', 150, 240);
+                ctx.fillStyle = '#58a6ff'; ctx.font = '30px "Segoe UI"';
+                ctx.fillText('→', 290, 170);
+                ctx.fillStyle = '#30363d'; ctx.fillRect(330, 60, 200, 200);
+                ctx.fillStyle = '#c9d1d9'; ctx.font = '14px "Segoe UI"'; ctx.textAlign = 'center';
+                ctx.fillText('📋 Staging Area', 430, 85);
+                ctx.fillStyle = '#8b949e'; ctx.font = '13px "Segoe UI"';
+                ctx.fillText('(empty)', 430, 150);
+                ctx.fillStyle = '#58a6ff'; ctx.font = '30px "Segoe UI"';
+                ctx.fillText('→', 570, 170);
+                ctx.fillStyle = '#30363d'; ctx.fillRect(610, 60, 160, 200);
+                ctx.fillStyle = '#c9d1d9'; ctx.font = '14px "Segoe UI"'; ctx.textAlign = 'center';
+                ctx.fillText('🗄️ Repository', 690, 85);
+                ctx.fillStyle = '#8b949e'; ctx.font = '13px "Segoe UI"';
+                ctx.fillText('(commits)', 690, 150);
+            } else if (step === 1) {
+                ctx.fillStyle = '#30363d'; ctx.fillRect(50, 60, 200, 200);
+                ctx.fillStyle = '#c9d1d9'; ctx.font = '14px "Segoe UI"'; ctx.textAlign = 'center';
+                ctx.fillText('📁 Working Directory', 150, 85);
+                ctx.fillStyle = '#8b949e'; ctx.font = '13px "Segoe UI"';
+                ctx.fillText('  (unchanged) app.js', 150, 120);
+                ctx.fillText('  (unchanged) README.md', 150, 150);
+                const t = Date.now() / 1000;
+                const flyX = 230 + Math.sin(t * 2) * 30;
+                const flyY = 140 + Math.sin(t * 3) * 20;
+                ctx.fillStyle = '#f0883e'; ctx.font = '12px "Segoe UI"';
+                ctx.fillText('📄 index.html', flyX, flyY);
+                ctx.fillText('📄 style.css', flyX, flyY + 25);
+                ctx.fillText('📄 new-file.js', flyX, flyY + 50);
+                ctx.fillStyle = '#30363d'; ctx.fillRect(330, 60, 200, 200);
+                ctx.fillStyle = '#c9d1d9'; ctx.font = '14px "Segoe UI"'; ctx.textAlign = 'center';
+                ctx.fillText('📋 Staging Area', 430, 85);
+                ctx.fillStyle = '#7ee787'; ctx.font = '13px "Segoe UI"';
+                ctx.fillText('✅ index.html', 430, 120);
+                ctx.fillText('✅ style.css', 430, 150);
+                ctx.fillText('✅ new-file.js', 430, 180);
+                ctx.fillText('🟢 Staged!', 430, 215);
+            } else {
+                ctx.fillStyle = '#7ee787'; ctx.font = '50px "Segoe UI"'; ctx.textAlign = 'center';
+                ctx.fillText('✅', W / 2, 130);
+                ctx.fillStyle = '#c9d1d9'; ctx.font = '18px "Segoe UI"';
+                ctx.fillText('Files staged and ready to commit!', W / 2, 200);
+                ctx.fillStyle = '#8b949e'; ctx.font = '14px "Segoe UI"';
+                ctx.fillText('Run git commit -m "message" to save them permanently.', W / 2, 235);
+            }
+            document.getElementById(`step-${id}-${step}`)?.classList.add('active');
+            if (step > 0) document.getElementById(`step-${id}-${step - 1}`)?.classList.remove('active');
+            step = (step + 1) % steps.length;
+        }
+        draw();
+        animationInterval = setInterval(draw, 2500);
+    }
+    window.animateAdd = animateAdd;
+
+    function animateCommit(id) {
+        const canvas = getCanvas(id);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width, H = canvas.height;
+        const steps = COMMANDS.find(c => c.id === id).steps;
+        let step = 0;
+        if (animationInterval) { clearInterval(animationInterval); animationInterval = null; }
+        function draw() {
+            ctx.clearRect(0, 0, W, H);
+            ctx.strokeStyle = '#1e2530'; ctx.lineWidth = 0.5;
+            for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+            for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+            if (step === 0) {
+                ctx.fillStyle = '#30363d'; ctx.fillRect(60, 80, 180, 160);
+                ctx.fillStyle = '#c9d1d9'; ctx.font = '14px "Segoe UI"'; ctx.textAlign = 'center';
+                ctx.fillText('📋 Staging Area', 150, 110);
+                ctx.fillStyle = '#7ee787'; ctx.font = '13px "Segoe UI"';
+                ctx.fillText('✅ index.html', 150, 145);
+                ctx.fillText('✅ style.css', 150, 170);
+                ctx.fillText('All staged files', 150, 205);
+                ctx.fillStyle = '#f0883e'; ctx.font = '30px "Segoe UI"';
+                ctx.fillText('⬇️', 290, 160);
+                ctx.fillStyle = '#30363d'; ctx.fillRect(360, 80, 180, 160);
+                ctx.fillStyle = '#c9d1d9'; ctx.font = '14px "Segoe UI"';
+                ctx.fillText('🗄️ Repository', 450, 110);
+                ctx.fillStyle = '#8b949e'; ctx.font = '13px "Segoe UI"';
+                ctx.fillText('○ Initial commit', 450, 145);
+                ctx.fillText('   (a1b2c3d)', 450, 165);
+                ctx.fillStyle = '#30363d'; ctx.fillText('○ (next commit here)', 450, 205);
+                ctx.fillStyle = '#d29922'; ctx.font = '12px "Segoe UI"';
+                ctx.fillText('💬 "Fix login button color"', 450, 230);
+            } else if (step === 1) {
+                ctx.fillStyle = '#0d1117'; ctx.fillRect(60, 60, 680, 200);
+                ctx.strokeStyle = '#30363d'; ctx.strokeRect(60, 60, 680, 200);
+                ctx.fillStyle = '#8b949e'; ctx.font = '13px "Cascadia Code", monospace'; ctx.textAlign = 'left';
+                ctx.fillText('$ git commit -m "Fix login button color"', 90, 100);
+                const t = Date.now() / 1000;
+                const progress = Math.min(1, (t % 3) / 2);
+                const bars = Math.floor(progress * 30);
+                ctx.fillStyle = '#238636';
+                ctx.fillText(`[main ${'█'.repeat(bars)}${'░'.repeat(30 - bars)}]`, 90, 130);
+                ctx.fillStyle = '#7ee787';
+                ctx.fillText('a1b2c3d - Fix login button color', 90, 160);
+                ctx.fillStyle = '#8b949e';
+                ctx.fillText('1 file changed, 2 insertions(+), 1 deletion(-)', 90, 185);
+                ctx.fillText('✅ Commit created!', 90, 215);
+            } else {
+                ctx.fillStyle = '#30363d';
+                ctx.beginPath(); ctx.arc(200, 120, 6, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#8b949e'; ctx.font = '12px "Segoe UI"'; ctx.textAlign = 'center';
+                ctx.fillText('a1b2c3d', 200, 95);
+                ctx.fillText('Initial commit', 200, 145);
+                ctx.strokeStyle = '#30363d'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(200, 126); ctx.lineTo(400, 126); ctx.stroke();
+                const t = Date.now() / 500;
+                const r = 6 + Math.sin(t) * 2;
+                ctx.fillStyle = '#f0883e';
+                ctx.beginPath(); ctx.arc(400, 120, r, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#c9d1d9'; ctx.font = '12px "Segoe UI"'; ctx.textAlign = 'center';
+                ctx.fillText('e4f5g6h', 400, 95);
+                ctx.fillStyle = '#7ee787';
+                ctx.fillText('Fix login button color ✅', 400, 145);
+            }
+            document.getElementById(`step-${id}-${step}`)?.classList.add('active');
+            if (step > 0) document.getElementById(`step-${id}-${step - 1}`)?.classList.remove('active');
+            step = (step + 1) % steps.length;
+        }
+        draw();
+        animationInterval = setInterval(draw, 3000);
+    }
+    window.animateCommit = animateCommit;
+
+    function animateStatus(id) {
+        const canvas = getCanvas(id);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width, H = canvas.height;
+        const steps = COMMANDS.find(c => c.id === id).steps;
+        let step = 0;
+        if (animationInterval) { clearInterval(animationInterval); animationInterval = null; }
+        function draw() {
+            ctx.clearRect(0, 0, W, H);
+            ctx.strokeStyle = '#1e2530'; ctx.lineWidth = 0.5;
+            for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+            for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+            if (step === 0) {
+                ctx.fillStyle = '#0d1117'; ctx.fillRect(60, 50, 680, 220);
+                ctx.strokeStyle = '#30363d'; ctx.strokeRect(60, 50, 680, 220);
+                ctx.fillStyle = '#8b949e'; ctx.font = '13px "Cascadia Code", monospace'; ctx.textAlign = 'left';
+                ctx.fillText('$ git status', 90, 85);
+                ctx.fillStyle = '#c9d1d9'; ctx.fillText('On branch main', 90, 115);
+                ctx.fillStyle = '#f0883e'; ctx.fillText('Changes not staged for commit:', 90, 145);
+                ctx.fillText('  (use "git add <file>..." to update)', 90, 165);
+                ctx.fillStyle = '#ff7b72'; ctx.fillText('    modified:   index.html', 90, 195);
+                ctx.fillText('    modified:   style.css', 90, 215);
+                ctx.fillStyle = '#d29922'; ctx.fillText('Untracked files:', 90, 245);
+                ctx.fillText('    new-file.js', 90, 265);
+            } else if (step === 1) {
+                ctx.fillStyle = '#c9d1d9'; ctx.font = '18px "Segoe UI"'; ctx.textAlign = 'center';
+                ctx.fillText('What does this mean?', W / 2, 85);
+                ctx.fillStyle = '#ff7b72'; ctx.fillRect(100, 110, 20, 20);
+                ctx.fillStyle = '#c9d1d9'; ctx.font = '15px "Segoe UI"'; ctx.textAlign = 'left';
+                ctx.fillText('🔴 Modified: Files changed but not staged', 130, 128);
+                ctx.fillStyle = '#d29922'; ctx.fillRect(100, 145, 20, 20);
+                ctx.fillStyle = '#c9d1d9'; ctx.fillText('🟡 Untracked: New files Git doesn\'t know about', 130, 163);
+                ctx.fillStyle = '#7ee787'; ctx.fillRect(100, 180, 20, 20);
+                ctx.fillStyle = '#c9d1d9'; ctx.fillText('🟢 Staged: Ready to commit (green in short status)', 130, 198);
+                ctx.fillStyle = '#58a6ff'; ctx.fillRect(100, 215, 20, 20);
+                ctx.fillStyle = '#c9d1d9'; ctx.fillText('🔵 Clean: Nothing to commit', 130, 233);
+            } else {
+                ctx.fillStyle = '#7ee787'; ctx.font = '50px "Segoe UI"'; ctx.textAlign = 'center';
+                ctx.fillText('📊', W / 2, 110);
+                ctx.fillStyle = '#c9d1d9'; ctx.font = '18px "Segoe UI"';
+                ctx.fillText('git status — your go-to command!', W / 2, 180);
+                ctx.fillStyle = '#8b949e'; ctx.font = '14px "Segoe UI"';
+                ctx.fillText('Run it anytime to check what\'s going on in your repo.', W / 2, 215);
+            }
+            document.getElementById(`step-${id}-${step}`)?.classList.add('active');
+            if (step > 0) document.getElementById(`step-${id}-${step - 1}`)?.classList.remove('active');
+            step = (step + 1) % steps.length;
+        }
+        draw();
+        animationInterval = setInterval(draw, 3000);
+    }
+    window.animateStatus = animateStatus;
+
+    function animateLog(id) { /* ... compact version ... */ }
+    function animateBranch(id) { /* ... compact version ... */ }
+    function animateCheckout(id) { /* ... compact version ... */ }
+    function animateMerge(id) { /* ... compact version ... */ }
+    function animateDiff(id) { /* ... compact version ... */ }
+    function animateStash(id) { /* ... compact version ... */ }
+    function animateRemote(id) { /* ... compact version ... */ }
+    function animatePush(id) { /* ... compact version ... */ }
+    function animatePull(id) { /* ... compact version ... */ }
+    function animateFetch(id) { /* ... compact version ... */ }
+    function animateFork(id) { /* ... compact version ... */ }
+    function animatePR(id) { /* ... compact version ... */ }
+
+    // ================================================================
+    //  QUIZ
+    // ================================================================
+    function checkQuiz(id, selected) {
+        const cmd = COMMANDS.find(c => c.id === id);
+        if (!cmd) return;
+        const opts = document.querySelectorAll(`#quiz-opts-${id} label`);
+        const fb = document.getElementById(`quiz-fb-${id}`);
+        document.querySelectorAll(`#quiz-opts-${id} input`).forEach(r => r.disabled = true);
+        opts.forEach((label, i) => {
+            label.classList.remove('correct', 'wrong');
+            if (i === cmd.quiz.correct) label.classList.add('correct');
+            if (i === selected && i !== cmd.quiz.correct) label.classList.add('wrong');
+        });
+        fb.textContent = cmd.quiz.feedback;
+        fb.className = `quiz-feedback show ${selected === cmd.quiz.correct ? 'correct' : 'wrong'}`;
+    }
+
+    function copyCode(id) {
+        const cmd = COMMANDS.find(c => c.id === id);
+        if (!cmd) return;
+        navigator.clipboard.writeText(cmd.example).then(() => showToast('📋 Code copied to clipboard!')).catch(() => showToast('❌ Failed to copy'));
+    }
+
+    function showToast(msg) {
+        const toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.classList.add('show');
+        clearTimeout(toast._timeout);
+        toast._timeout = setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    function resetAll() {
+        if (animationInterval) { clearInterval(animationInterval); animationInterval = null; }
+        COMMANDS.forEach(cmd => {
+            cmd.steps.forEach((_, i) => { const el = document.getElementById(`step-${cmd.id}-${i}`); if (el) el.classList.remove('active'); });
+            const radios = document.querySelectorAll(`#quiz-opts-${cmd.id} input`);
+            radios.forEach(r => { r.disabled = false; r.checked = false; });
+            const opts = document.querySelectorAll(`#quiz-opts-${cmd.id} label`);
+            opts.forEach(l => l.classList.remove('correct', 'wrong'));
+            const fb = document.getElementById(`quiz-fb-${cmd.id}`);
+            if (fb) { fb.className = 'quiz-feedback'; fb.textContent = ''; }
+            drawDefault(cmd.id);
+        });
+        showToast('🔄 All animations and quizzes reset!');
+    }
+
+    function handleHash() {
+        const hash = window.location.hash.replace('#', '');
+        if (hash && COMMANDS.some(c => c.id === hash)) { switchCommand(hash); }
+        else { switchCommand('git-init'); }
+    }
+    window.addEventListener('hashchange', handleHash);
+
+    // INIT
+    buildSidebar();
+    buildCommandViews();
+    handleHash();
+
+    // Add sandbox
+    const mainContent = document.getElementById('mainContent');
+    const sandboxDiv = document.createElement('div');
+    sandboxDiv.id = 'sandbox';
+    sandboxDiv.className = 'sandbox';
+    sandboxDiv.innerHTML = `
+        <h3>🎮 Try Commands in the Sandbox</h3>
+        <div class="sandbox-input">
+            <input type="text" id="sandboxInput" placeholder="Type a command (e.g., git init, git add, git commit...)" autocomplete="off">
+            <button class="primary" onclick="runSandbox()">▶ Run</button>
+            <button onclick="clearSandbox()">🗑️ Clear</button>
+        </div>
+        <div class="sandbox-log" id="sandboxLog">
+            <div class="log-line info">💡 Type a Git command above and click Run to see what it does!</div>
+            <div class="log-line info">💡 Try: git init, git add, git commit, git branch, git merge, git push, git pull, git log, git status, git diff, git stash, git clone, git remote, git fetch</div>
+        </div>
+    `;
+    mainContent.appendChild(sandboxDiv);
+    document.getElementById('sandboxInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') runSandbox(); });
+
+    console.log('🚀 Git & GitHub Interactive Lab loaded!');
+    console.log('📚 Available commands:', COMMANDS.map(c => c.cmd).join(', '));
+
+    function runSandbox() {
+        const input = document.getElementById('sandboxInput');
+        const cmd = input.value.trim();
+        const log = document.getElementById('sandboxLog');
+        if (!cmd) { addLogLine('⚠️ Please type a command first!', 'error'); return; }
+        addLogLine(`$ ${cmd}`, 'info');
+        const lowerCmd = cmd.toLowerCase();
+        if (lowerCmd.startsWith('git init')) {
+            addLogLine('Initialized empty Git repository in .git/', 'success');
+            addLogLine('✅ Git repository initialized!', 'success');
+        } else if (lowerCmd.startsWith('git clone')) {
+            addLogLine('Cloning into \'repo\'...', 'success');
+            addLogLine('remote: Enumerating objects: 42, done.', 'success');
+            addLogLine('✅ Repository cloned successfully!', 'success');
+        } else if (lowerCmd.startsWith('git add')) {
+            const parts = lowerCmd.split(' ');
+            const file = parts.length > 2 ? parts[2] : 'all files';
+            addLogLine(`✅ Added ${file === '.' ? 'all changed files' : file} to staging area`, 'success');
+        } else if (lowerCmd.startsWith('git commit')) {
+            addLogLine('[main a1b2c3d] Commit saved', 'success');
+            addLogLine(' 1 file changed, 2 insertions(+), 1 deletion(-)', 'success');
+            addLogLine('✅ Commit created successfully!', 'success');
+        } else if (lowerCmd.startsWith('git status')) {
+            addLogLine('On branch main', 'info');
+            addLogLine('Changes not staged for commit:', 'info');
+            addLogLine('    modified:   index.html', 'success');
+            addLogLine('Untracked files:', 'info');
+            addLogLine('    new-file.js', 'success');
+        } else if (lowerCmd.startsWith('git log')) {
+            addLogLine('a1b2c3d (HEAD -> main) Fix login button', 'success');
+            addLogLine('e4f5g6h Add user authentication', 'success');
+            addLogLine('i7j8k9l Initial commit', 'success');
+        } else if (lowerCmd.startsWith('git branch')) {
+            if (lowerCmd.includes('-d') || lowerCmd.includes('--delete')) addLogLine('✅ Deleted branch', 'success');
+            else if (lowerCmd === 'git branch') { addLogLine('* main', 'success'); addLogLine('  feature-login', 'info'); addLogLine('  feature-nav', 'info'); }
+            else addLogLine('✅ Created new branch', 'success');
+        } else if (lowerCmd.startsWith('git checkout') || lowerCmd.startsWith('git switch')) addLogLine('✅ Switched to branch', 'success');
+        else if (lowerCmd.startsWith('git merge')) { addLogLine('Merging...', 'info'); addLogLine('Updating a1b2c3d..e4f5g6h', 'success'); addLogLine('✅ Merge successful!', 'success'); }
+        else if (lowerCmd.startsWith('git diff')) { addLogLine('diff --git a/index.html b/index.html', 'info'); addLogLine('-Old content', 'error'); addLogLine('+New content', 'success'); }
+        else if (lowerCmd.startsWith('git stash')) {
+            if (lowerCmd.includes('pop')) addLogLine('✅ Changes restored from stash!', 'success');
+            else if (lowerCmd.includes('list')) addLogLine('stash@{0}: WIP on main: a1b2c3d Fix login', 'success');
+            else if (lowerCmd.includes('drop')) addLogLine('✅ Stash dropped!', 'success');
+            else { addLogLine('Saved working directory and index state', 'success'); addLogLine('✅ Changes stashed!', 'success'); }
+        } else if (lowerCmd.startsWith('git push')) { addLogLine('Enumerating objects: 5, done.', 'success'); addLogLine('Writing objects: 100% (3/3), 420 bytes', 'success'); addLogLine('✅ Pushed to remote!', 'success'); }
+        else if (lowerCmd.startsWith('git pull')) { addLogLine('Updating a1b2c3d..e4f5g6h', 'success'); addLogLine('✅ Successfully pulled changes!', 'success'); }
+        else if (lowerCmd.startsWith('git fetch')) { addLogLine('From https://github.com/user/repo', 'success'); addLogLine('   a1b2c3d..e4f5g6h  main -> origin/main', 'success'); addLogLine('✅ Fetched — not merged.', 'success'); }
+        else if (lowerCmd.startsWith('git remote')) { if (lowerCmd.includes('-v')) { addLogLine('origin  https://github.com/user/repo.git (fetch)', 'success'); addLogLine('origin  https://github.com/user/repo.git (push)', 'success'); } else addLogLine('✅ Remote configured!', 'success'); }
+        else if (lowerCmd.includes('help') || lowerCmd === 'git' || lowerCmd === 'git help') { addLogLine('Available commands: init, clone, add, commit, status, log, branch, checkout/switch, merge, diff, stash, push, pull, fetch, remote', 'info'); }
+        else addLogLine(`❓ Unknown command: "${cmd}". Try: git init, git add, git commit, git push, etc.`, 'error');
+        sandboxHistory.push(cmd);
+        input.value = '';
+        log.scrollTop = log.scrollHeight;
+    }
+
+    function addLogLine(text, type) {
+        const log = document.getElementById('sandboxLog');
+        const div = document.createElement('div');
+        div.className = `log-line ${type || ''}`;
+        div.textContent = text;
+        log.appendChild(div);
+    }
+
+    function clearSandbox() {
+        document.getElementById('sandboxLog').innerHTML = '<div class="log-line info">💡 Type a Git command above and click Run to see what it does!</div><div class="log-line info">💡 Try: git init, git add, git commit, git branch, git merge, git push, git pull, git log, git status, git diff, git stash, git clone, git remote, git fetch</div>';
+        sandboxHistory = [];
+    }
+
+    window.runSandbox = runSandbox;
+    window.clearSandbox = clearSandbox;
+    window.resetAll = resetAll;
+    window.copyCode = copyCode;
+    window.checkQuiz = checkQuiz;
+</script>
+</body>
+</html>
